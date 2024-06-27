@@ -1,22 +1,41 @@
+// green tags -> more things about a code
+// Including header files
 #include<termios.h> // header file for terminal attributes
 #include<unistd.h>
+#include<errno.h>
 #include<stdlib.h>
 #include<ctype.h> //for iscntrl() function
 #include<stdio.h>
 
+// Defines
 
+
+// Data
 
 struct termios orig_termios;
 
+// Terminal
+//It will print error message and exit the program.
+void die(const char *s){
+    perror(s); // * IT looks at the errno variable and prints a discriptive error message
+    exit(1);  // * exit the program with exit status 0 that indictes a faliure.
+}
+
+
 void disableRawMode(){
-    tcsetattr(STDIN_FILENO, TCIFLUSH, &orig_termios);
+    if(tcsetattr(STDIN_FILENO, TCIFLUSH, &orig_termios) == -1){
+        die("tcsetattr");
+    }
 }
 void enableRawMode(){
 
-    tcgetattr(STDERR_FILENO, &orig_termios);
+    if(tcgetattr(STDERR_FILENO, &orig_termios)==-1) die("tcgetattr");
     atexit(disableRawMode);
 
     struct termios raw = orig_termios;
+
+
+
     
     //this will disable the ctrl s & ctrl q
     //XOFF to pause transmission and XON to resume transmission.
@@ -36,18 +55,19 @@ void enableRawMode(){
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG ); // this disable ctrl c & ctrl z
     
     //adding a timeout for printf().
-    raw.c_cc[VMIN] = 0;
-    raw.c_cc[VTIME] = 1;
+    raw.c_cc[VMIN] = 0;// Vnim sets the minimim number of bytes before read and return.
+    raw.c_cc[VTIME] = 1; //VTIME sets the max amount of time to wait bedore read().
 
 
-    tcsetattr(STDIN_FILENO, TCSADRAIN, &raw);
+    if(tcsetattr(STDIN_FILENO, TCSADRAIN, &raw) == -1) die("tcgetattr");
 }
+// Init 
 int main(){
     enableRawMode();
 
     while(1){
         char c = '\0';
-        read(STDIN_FILENO, &c,1);
+        if(read(STDIN_FILENO, &c,1)==-1 && errno != EAGAIN) die("read");
         if(iscntrl(c)){
             printf("%d\r\n", c); //FROM NOW we have to write \r\n for newline.
         } else {
