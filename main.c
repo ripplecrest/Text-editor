@@ -1,5 +1,5 @@
 // green tags -> more things about a code
-// Including header files
+// todo Including header files
 #include<termios.h> // header file for terminal attributes
 #include<unistd.h>
 #include<errno.h>
@@ -7,10 +7,10 @@
 #include<ctype.h> //for iscntrl() function
 #include<stdio.h>
 
-// Defines
+// todo Defines
+#define CTRL_KEY(k) ((k) & 0x1f) //? This will convert the above 3 bits to 0.
 
-
-// Data
+// todo Data
 
 struct termios orig_termios;
 
@@ -33,7 +33,6 @@ void enableRawMode(){
     atexit(disableRawMode);
 
     struct termios raw = orig_termios;
-
 
 
     
@@ -61,19 +60,54 @@ void enableRawMode(){
 
     if(tcsetattr(STDIN_FILENO, TCSADRAIN, &raw) == -1) die("tcgetattr");
 }
-// Init 
+
+//! editorReadKey()'s job is to wait for one keybress and return it. ( deals with low level terminal input))
+char editorReadKey() {
+    int nread;
+    char c;
+    while((nread = read(STDIN_FILENO, &c, 1)) != 1) {
+        if(nread == -1 && errno != EAGAIN) die("read");
+    }
+    return c;
+}
+// todo Output
+
+void editorRefreshScreen(){
+    write(STDOUT_FILENO, "\x1b[2J", 4); //? They both come from unstid.h header file.
+    //in the above line of code we are adding 4 bytes, \x1b is 27 in decimal and [2J are other 3 bytes.
+}
+
+// todo Input
+
+//! this function waits of keypress and then handel it.(it deals with mapping keys to editor function.)
+void editorProcessKeypress() {
+    char c = editorReadKey();
+
+    switch (c){
+        case CTRL_KEY('q'):
+        exit(0);
+        break;
+    }
+}
+
+
+
+
+// todo Init 
 int main(){
     enableRawMode();
 
     while(1){
-        char c = '\0';
-        if(read(STDIN_FILENO, &c,1)==-1 && errno != EAGAIN) die("read");
-        if(iscntrl(c)){
-            printf("%d\r\n", c); //FROM NOW we have to write \r\n for newline.
-        } else {
-            printf("%d ('%c')\r\n",c,c);
-        }
-        if( c == 'q') break;
+        // char c = '\0';
+        // if(read(STDIN_FILENO, &c,1)==-1 && errno != EAGAIN) die("read");
+        // if(iscntrl(c)){
+        //     printf("%d\r\n", c); //FROM NOW we have to write \r\n for newline.
+        // } else {
+        //     printf("%d ('%c')\r\n",c,c);
+        // }
+        // if( c == CTRL_KEY('q')) break;
+        editorRefreshScreen();
+        editorProcessKeypress();
     }
     return 0;
 }
