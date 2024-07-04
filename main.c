@@ -17,6 +17,8 @@ struct termios orig_termios;
 // Terminal
 //It will print error message and exit the program.
 void die(const char *s){
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     perror(s); // * IT looks at the errno variable and prints a discriptive error message
     exit(1);  // * exit the program with exit status 0 that indictes a faliure.
 }
@@ -71,10 +73,18 @@ char editorReadKey() {
     return c;
 }
 // todo Output
-
+void editorDrawRows() {
+    int y;
+    for(y = 0; y<24; y++){
+        write(STDOUT_FILENO, "~\r\n",3);
+    }
+}
 void editorRefreshScreen(){
     write(STDOUT_FILENO, "\x1b[2J", 4); //? They both come from unstid.h header file.
+    write(STDOUT_FILENO, "\x1b[H", 3); //? This is onlt 3 byte long and uses H command to position cursor.
     //in the above line of code we are adding 4 bytes, \x1b is 27 in decimal and [2J are other 3 bytes.
+    editorDrawRows();
+    write(STDOUT_FILENO, "\x1b[H", 3);
 }
 
 // todo Input
@@ -85,6 +95,8 @@ void editorProcessKeypress() {
 
     switch (c){
         case CTRL_KEY('q'):
+        write(STDOUT_FILENO, "\x1b[2J", 4);
+        write(STDOUT_FILENO, "\x1b[H", 3);
         exit(0);
         break;
     }
