@@ -11,7 +11,11 @@
 #define CTRL_KEY(k) ((k) & 0x1f) //? This will convert the above 3 bits to 0.
 
 // todo Data
+struct editorConfig{
+    struct termios orig_termios;
+};
 
+struct editorConfig E; // This is our global variable and it contains editor state.
 struct termios orig_termios;
 
 // Terminal
@@ -25,24 +29,21 @@ void die(const char *s){
 
 
 void disableRawMode(){
-    if(tcsetattr(STDIN_FILENO, TCIFLUSH, &orig_termios) == -1){
+    if(tcsetattr(STDIN_FILENO, TCIFLUSH, &E.orig_termios) == -1){
         die("tcsetattr");
     }
 }
 void enableRawMode(){
 
-    if(tcgetattr(STDERR_FILENO, &orig_termios)==-1) die("tcgetattr");
+    if(tcgetattr(STDERR_FILENO, &E.orig_termios)==-1) die("tcgetattr");
     atexit(disableRawMode);
 
-    struct termios raw = orig_termios;
-
-
-    
+    struct termios raw = E.orig_termios;
     //this will disable the ctrl s & ctrl q
     //XOFF to pause transmission and XON to resume transmission.
     // NL in ICRNL stands for new line
     raw.c_iflag &= ~(BRKINT | ICRNL |INPCK| ISTRIP | IXON); //IXON starts with i it is a input flag.
-    
+
     //turning off al the output processes
     //o means output and post means post-processing of output.
     raw.c_oflag &= ~(OPOST);
@@ -52,9 +53,9 @@ void enableRawMode(){
 
     //ISIG comes from the <termios.c>, like ICANON but it is not a input flag.
     //IEXTEN is used to turn off ctrl v, ctrl v waits to type another signal and then send character literally
-    //IEXTEN is also from termios.h & belongs to the c_lflag. 
+    //IEXTEN is also from termios.h & belongs to the c_lflag.
     raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG ); // this disable ctrl c & ctrl z
-    
+
     //adding a timeout for printf().
     raw.c_cc[VMIN] = 0;// Vnim sets the minimim number of bytes before read and return.
     raw.c_cc[VTIME] = 1; //VTIME sets the max amount of time to wait bedore read().
@@ -88,8 +89,8 @@ void editorRefreshScreen(){
 }
 
 // todo Input
-
 //! this function waits of keypress and then handel it.(it deals with mapping keys to editor function.)
+
 void editorProcessKeypress() {
     char c = editorReadKey();
 
@@ -105,7 +106,7 @@ void editorProcessKeypress() {
 
 
 
-// todo Init 
+// todo Init
 int main(){
     enableRawMode();
 
@@ -127,7 +128,7 @@ int main(){
 // Struct termios, tcgetattr(), tcsetattr(), ECHO and TCAFLUSH  comes from <termios.h>
 // Echo cause each key you type to be printed to the terminal.
 // at exit comes from stdlib.h it automatically calls the disableRawMode() function on when the program is exit.
-// ICANON comes from termios.h 
+// ICANON comes from termios.h
 
 // ctrl-c sends a SIGINT signal tp the current process which cause it to terminate.
 // ctrl-z senda a SIGTSTP signal to the current process which cause it suspend.
