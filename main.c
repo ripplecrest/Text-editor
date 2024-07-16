@@ -1,9 +1,11 @@
 // green tags -> more things about a code
 // todo Including header files
+#include <asm-generic/ioctls.h>
 #include<termios.h> // header file for terminal attributes
 #include<unistd.h>
 #include<errno.h>
 #include<stdlib.h>
+#include<sys/ioctl.h>
 #include<ctype.h> //for iscntrl() function
 #include<stdio.h>
 
@@ -12,13 +14,15 @@
 
 // todo Data
 struct editorConfig{
+    int screenrows;
+    int screencols;
     struct termios orig_termios;
 };
 
 struct editorConfig E; // This is our global variable and it contains editor state.
 struct termios orig_termios;
 
-// Terminal
+                                    // Terminal //
 //It will print error message and exit the program.
 void die(const char *s){
     write(STDOUT_FILENO, "\x1b[2J", 4);
@@ -73,10 +77,23 @@ char editorReadKey() {
     }
     return c;
 }
+
+int getWindowSize(int *rows, int *cols){
+    struct winsize ws;
+    if(1 || ioctl(STDOUT_FILENO,TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0){
+        if(write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
+        editorReadKey();
+        return -1;
+    } else{
+        *cols = ws.ws_col;
+        *rows = ws.ws_row;
+        return 0;
+    }
+}
 // todo Output
 void editorDrawRows() {
     int y;
-    for(y = 0; y<24; y++){
+    for(y = 0; y< E.screenrows; y++){
         write(STDOUT_FILENO, "~\r\n",3);
     }
 }
@@ -106,10 +123,13 @@ void editorProcessKeypress() {
 
 
 
-// todo Init
+// todo Init //
+void initEditor() {
+    if(getWindowSize(&E.screenrows, &E.screencols) == -1 ) die("getWindowsSize");
+}
 int main(){
     enableRawMode();
-
+    initEditor();
     while(1){
         // char c = '\0';
         // if(read(STDIN_FILENO, &c,1)==-1 && errno != EAGAIN) die("read");
